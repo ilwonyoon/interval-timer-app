@@ -57,7 +57,13 @@ function App() {
   useEffect(() => { setCountRef.current = setCount; }, [setCount]);
   useEffect(() => { secondsRef.current = seconds; }, [seconds]);
 
-  // 타이머 틱
+  // 실시간 progress를 위한 상태
+  const [progressPercent, setProgressPercent] = useState(1);
+  const timerStartRef = useRef<number | null>(null);
+  const timerEndRef = useRef<number | null>(null);
+  const rafRef = useRef<number | null>(null);
+
+  // 타이머 틱 (1초마다 seconds만 줄임)
   const tick = () => {
     if (secondsRef.current > 1) {
       setSeconds((s) => s - 1);
@@ -93,6 +99,36 @@ function App() {
       }
     }
   };
+
+  // 실시간 progress 애니메이션
+  useEffect(() => {
+    if (!isRunning) {
+      setProgressPercent(1);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      return;
+    }
+    // 타이머 시작/phase 변경 시점에 시작/종료 시각 기록
+    const duration = phase === 'work' ? workDuration : restDuration;
+    const start = performance.now();
+    const end = start + duration * 1000;
+    timerStartRef.current = start;
+    timerEndRef.current = end;
+
+    function animate(now: number) {
+      const total = duration * 1000;
+      const remain = Math.max(0, timerEndRef.current! - now);
+      setProgressPercent(remain / total);
+      if (remain > 0 && isRunning) {
+        rafRef.current = requestAnimationFrame(animate);
+      } else {
+        setProgressPercent(0);
+      }
+    }
+    rafRef.current = requestAnimationFrame(animate);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [phase, isRunning, workDuration, restDuration, setCount]);
 
   // 타이머 관리
   useEffect(() => {
@@ -186,6 +222,43 @@ function App() {
     </div>
   );
 
+  // 원형 타이머 컴포넌트
+  function CircularTimer({ percent, timeLabel, subLabel }: { percent: number, timeLabel: string, subLabel?: string }) {
+    const size = 260;
+    const stroke = 7;
+    const radius = (size - stroke) / 2;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference * (1 - percent);
+    return (
+      <svg width={size} height={size} className="block mx-auto" style={{ transform: 'rotate(-90deg)' }}>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="#E3D8FF"
+          strokeWidth={stroke}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="#9B8AFB"
+          strokeWidth={stroke}
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          style={{ transition: 'stroke-dashoffset 0.3s cubic-bezier(0.4,0,0.2,1)' }}
+        />
+        <g style={{ transform: 'rotate(90deg)', transformOrigin: '50% 50%' }}>
+          <text x="50%" y="44%" textAnchor="middle" className="fill-onPrimary text-lg font-medium" dominantBaseline="middle">{subLabel}</text>
+          <text x="50%" y="56%" textAnchor="middle" className="fill-onPrimary text-5xl font-bold" dominantBaseline="middle">{timeLabel}</text>
+        </g>
+      </svg>
+    );
+  }
+
   return (
     <div className="w-[375px] h-[812px] mx-auto flex flex-col items-center justify-center bg-gradient-to-b from-primary/10 to-surfaceVariant font-sans">
       {screen === 'home' && (
@@ -265,11 +338,17 @@ function App() {
           >
             ← Back
           </button>
-          <div className="w-full flex flex-col items-center pt-12">
-            <div className="text-sm text-onSurfaceVariant mb-2 mt-2">Set {setCount} / {totalSets}</div>
-            <div className={`text-2xl font-semibold mb-1 ${phase === 'work' ? 'text-tertiary' : 'text-primary'}`}>{phase === 'work' ? '운동' : '휴식'}</div>
-            <div className="text-7xl font-mono font-extrabold mb-8 text-onSurface" style={{letterSpacing: '0.05em'}}>{formatTime(seconds)}</div>
-            <div className="flex gap-2 w-full">
+          <div className="w-full flex flex-col items-center pt-16 pb-8">
+            <CircularTimer
+              percent={progressPercent}
+              timeLabel={formatTime(seconds)}
+              subLabel={phase === 'work' ? `${workDuration}초` : `${restDuration}초`}
+            />
+            <div className="flex flex-col items-center mt-4">
+              <div className="text-sm text-onSurfaceVariant mb-1">Set {setCount} / {totalSets}</div>
+              <div className={`text-lg font-semibold mb-1 ${phase === 'work' ? 'text-tertiary' : 'text-primary'}`}>{phase === 'work' ? '운동' : '휴식'}</div>
+            </div>
+            <div className="flex gap-2 w-full mt-8">
               <button
                 onClick={isRunning ? pauseTimer : startTimer}
                 className="flex-1 py-3 rounded-2xl text-lg font-bold text-onPrimary bg-primary shadow-md hover:bg-primary/90 transition min-w-[88px] tracking-widest"
