@@ -174,9 +174,28 @@ function App() {
     setIsRunning(true);
   };
 
+  // 홈에서 기록 compact 표시
+  const renderRecords = () => (
+    <div className="w-full max-w-md bg-surface rounded-3xl shadow-lg p-4 mt-6 border border-outline/30 mx-auto">
+      <div className="font-bold text-primary mb-2 tracking-wide text-base">운동 기록</div>
+      {records.length === 0 ? (
+        <div className="text-onSurfaceVariant text-sm">아직 기록이 없습니다.</div>
+      ) : (
+        <ul className="space-y-2">
+          {records.map((r, i) => (
+            <li key={i} className="flex justify-between text-sm text-onSurfaceVariant border-b last:border-b-0 border-outline/20 pb-1">
+              <span>{r.date}</span>
+              <span className="font-medium">{r.sets}세트/{r.work}s/{r.rest}s</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+
   // 홈에서 사용한 세팅 H-scroll 표시
   const renderSettings = () => (
-    <div className="w-full max-w-xs mt-2 mb-4 overflow-x-auto">
+    <div className="w-full max-w-md mt-2 mb-4 overflow-x-auto mx-auto">
       <div className="flex gap-2 w-max px-1">
         {settings.length === 0 ? (
           <div className="flex flex-col items-center justify-center min-w-[90px] px-3 py-2 rounded-2xl bg-surfaceVariant border border-outline/30 shadow text-onSurfaceVariant font-semibold text-xs opacity-60 select-none">
@@ -203,40 +222,26 @@ function App() {
   // 세팅화면 Back 버튼
   const handleSetupBack = () => setScreen('home');
 
-  // 홈에서 기록 compact 표시
-  const renderRecords = () => (
-    <div className="w-full max-w-xs bg-surface rounded-3xl shadow-lg p-4 mt-6 border border-outline/30">
-      <div className="font-bold text-primary mb-2 tracking-wide text-base">운동 기록</div>
-      {records.length === 0 ? (
-        <div className="text-onSurfaceVariant text-sm">아직 기록이 없습니다.</div>
-      ) : (
-        <ul className="space-y-2">
-          {records.map((r, i) => (
-            <li key={i} className="flex justify-between text-sm text-onSurfaceVariant border-b last:border-b-0 border-outline/20 pb-1">
-              <span>{r.date}</span>
-              <span className="font-medium">{r.sets}세트/{r.work}s/{r.rest}s</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-
   // 원형 타이머 컴포넌트
-  function CircularTimer({ percent, timeLabel, subLabel }: { percent: number, timeLabel: string, subLabel?: string }) {
-    const size = 260;
+  function CircularTimer({ percent, timeLabel, subLabel, isRest }: { percent: number, timeLabel: string, subLabel?: string, isRest?: boolean }) {
+    // 반응형: 최대 320px, 최소 200px
+    const size =  Math.max(200, Math.min(320, Math.floor(window.innerWidth * 0.7)));
     const stroke = 7;
     const radius = (size - stroke) / 2;
     const circumference = 2 * Math.PI * radius;
     const offset = circumference * (1 - percent);
+    // 색상 분기 (휴식: gray scale)
+    const progressColor = isRest ? '#A3A3A3' : '#9B8AFB'; // gray-400 or purple
+    const bgColor = isRest ? '#E5E7EB' : '#E3D8FF'; // gray-200 or purple-100
+    const textColor = isRest ? 'fill-gray-700' : 'fill-onPrimary';
     return (
-      <svg width={size} height={size} className="block mx-auto" style={{ transform: 'rotate(-90deg)' }}>
+      <svg width={size} height={size} className="block mx-auto w-full max-w-[320px] h-auto" style={{ transform: 'rotate(-90deg)' }}>
         <circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#E3D8FF"
+          stroke={bgColor}
           strokeWidth={stroke}
         />
         <circle
@@ -244,7 +249,7 @@ function App() {
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#9B8AFB"
+          stroke={progressColor}
           strokeWidth={stroke}
           strokeDasharray={circumference}
           strokeDashoffset={offset}
@@ -252,22 +257,25 @@ function App() {
           style={{ transition: 'stroke-dashoffset 0.3s cubic-bezier(0.4,0,0.2,1)' }}
         />
         <g style={{ transform: 'rotate(90deg)', transformOrigin: '50% 50%' }}>
-          <text x="50%" y="44%" textAnchor="middle" className="fill-onPrimary text-lg font-medium" dominantBaseline="middle">{subLabel}</text>
-          <text x="50%" y="56%" textAnchor="middle" className="fill-onPrimary text-5xl font-bold" dominantBaseline="middle">{timeLabel}</text>
+          <text x="50%" y="44%" textAnchor="middle" className={`${textColor} text-lg font-medium`} dominantBaseline="middle">{subLabel}</text>
+          <text x="50%" y="56%" textAnchor="middle" className={`${textColor} text-5xl font-bold`} dominantBaseline="middle">{timeLabel}</text>
         </g>
       </svg>
     );
   }
 
   return (
-    <div className="w-[375px] h-[812px] mx-auto flex flex-col items-center justify-center bg-gradient-to-b from-primary/10 to-surfaceVariant font-sans">
+    <div className={
+      `min-h-screen w-full flex flex-col items-center justify-center font-sans
+      ${screen === 'timer' && phase === 'rest' ? 'bg-gradient-to-b from-gray-100 to-gray-300' : 'bg-gradient-to-b from-primary/10 to-surfaceVariant'}
+      `
+    }>
       {screen === 'home' && (
-        <div className="flex flex-col items-center w-full">
+        <div className="flex flex-col items-center w-full max-w-md px-4 py-8 mx-auto">
           <button
             onClick={() => setScreen('setup')}
-            className="w-full max-w-xs py-4 rounded-2xl text-xl font-bold text-onPrimary bg-primary shadow-md hover:bg-primary/90 transition mb-2"
-            style={{letterSpacing: '0.03em'}}
-          >
+            className="w-full max-w-md py-4 rounded-2xl text-xl font-bold text-onPrimary bg-primary shadow-md hover:bg-primary/90 transition mb-2"
+            style={{letterSpacing: '0.03em'}}>
             시작하기
           </button>
           {renderSettings()}
@@ -275,13 +283,12 @@ function App() {
         </div>
       )}
       {screen === 'setup' && (
-        <div className="w-full max-w-xs flex flex-col items-center gap-8 relative bg-transparent shadow-none border-none p-0">
+        <div className="w-full max-w-xs flex flex-col items-center gap-8 relative bg-transparent shadow-none border-none p-0 px-4 py-8">
           {/* Back 버튼 */}
           <button
             onClick={handleSetupBack}
             className="absolute left-0 top-0 text-primary font-bold text-lg px-3 py-1 rounded-xl hover:bg-primary/10 transition z-10"
-            style={{letterSpacing: '0.02em', marginTop: '12px', marginLeft: '4px'}}
-          >
+            style={{letterSpacing: '0.02em', marginTop: '12px', marginLeft: '4px'}}>
             ← Back
           </button>
           <div className="w-full flex flex-col items-center pt-12">
@@ -321,39 +328,38 @@ function App() {
             <button
               onClick={handleStart}
               className="w-full py-3 rounded-2xl text-lg font-bold text-onPrimary bg-primary shadow-md hover:bg-primary/90 transition min-w-[88px] tracking-widest mt-8"
-              style={{letterSpacing: '0.03em'}}
-            >
+              style={{letterSpacing: '0.03em'}}>
               타이머 시작
             </button>
           </div>
         </div>
       )}
       {screen === 'timer' && (
-        <div className="w-full max-w-xs flex flex-col items-center relative bg-transparent shadow-none border-none p-0">
+        <div className="w-full max-w-xs flex flex-col items-center relative bg-transparent shadow-none border-none p-0 px-4 py-8">
           {/* Back 버튼 */}
           <button
             onClick={handleSetupBack}
-            className="absolute left-0 top-0 text-primary font-bold text-lg px-3 py-1 rounded-xl hover:bg-primary/10 transition z-10"
-            style={{letterSpacing: '0.02em', marginTop: '12px', marginLeft: '4px'}}
-          >
+            className={`absolute left-0 top-0 font-bold text-lg px-3 py-1 rounded-xl transition z-10 ${phase === 'rest' ? 'text-gray-700 hover:bg-gray-200' : 'text-primary hover:bg-primary/10'}`}
+            style={{letterSpacing: '0.02em', marginTop: '12px', marginLeft: '4px'}}>
             ← Back
           </button>
-          <div className="w-full flex flex-col items-center pt-16 pb-8">
+          <div className="w-full flex flex-col items-center pt-8 pb-8">
             <CircularTimer
               percent={progressPercent}
               timeLabel={formatTime(seconds)}
               subLabel={phase === 'work' ? `${workDuration}초` : `${restDuration}초`}
+              isRest={phase === 'rest'}
             />
             <div className="flex flex-col items-center mt-4">
-              <div className="text-sm text-onSurfaceVariant mb-1">Set {setCount} / {totalSets}</div>
-              <div className={`text-lg font-semibold mb-1 ${phase === 'work' ? 'text-tertiary' : 'text-primary'}`}>{phase === 'work' ? '운동' : '휴식'}</div>
+              <div className={`text-sm mb-1 ${phase === 'rest' ? 'text-gray-700' : 'text-onSurfaceVariant'}`}>Set {setCount} / {totalSets}</div>
+              <div className={`text-lg font-semibold mb-1 ${phase === 'rest' ? 'text-gray-700' : (phase === 'work' ? 'text-tertiary' : 'text-primary')}`}>{phase === 'work' ? '운동' : '휴식'}</div>
             </div>
             <div className="flex gap-2 w-full mt-8">
               <button
                 onClick={isRunning ? pauseTimer : startTimer}
-                className="flex-1 py-3 rounded-2xl text-lg font-bold text-onPrimary bg-primary shadow-md hover:bg-primary/90 transition min-w-[88px] tracking-widest"
-                style={{letterSpacing: '0.03em'}}
-              >
+                className={`flex-1 py-3 rounded-2xl text-lg font-bold shadow-md transition min-w-[88px] tracking-widest
+                  ${phase === 'rest' ? 'text-gray-800 bg-gray-200 hover:bg-gray-300' : 'text-onPrimary bg-primary hover:bg-primary/90'}`}
+                style={{letterSpacing: '0.03em'}}>
                 {isRunning ? '일시정지' : '시작하기'}
               </button>
             </div>
