@@ -337,7 +337,7 @@ function App() {
               style={{letterSpacing: '0.02em', background: 'none', boxShadow: 'none', border: 'none'}}>
               ← Back
             </button>
-            <div className="min-h-screen w-full flex flex-col items-center justify-center">
+            <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center">
               <div className="w-full max-w-md px-4 py-12 flex flex-col items-center">
                 <div className="text-2xl font-bold mb-6 text-gray-50 tracking-wide">인터벌 타이머 세팅</div>
                 <div className="flex flex-col gap-4 w-full">
