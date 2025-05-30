@@ -260,7 +260,7 @@ function App() {
     const bgColor = isRest ? '#E5E7EB' : '#E3D8FF'; // gray-200 or purple-100
     const textColor = isRest ? 'fill-gray-700' : 'fill-gray-50';
     return (
-      <svg width={size} height={size} className="block mx-auto w-full max-w-[320px] h-auto" style={{ transform: 'rotate(-90deg)' }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="block mx-auto w-full max-w-[320px] h-auto">
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -280,11 +280,10 @@ function App() {
           strokeDashoffset={offset}
           strokeLinecap="round"
           style={{ transition: 'stroke-dashoffset 0.3s cubic-bezier(0.4,0,0.2,1)' }}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
-        <g style={{ transform: 'rotate(90deg)', transformOrigin: '50% 50%' }}>
-          <text x="50%" y="44%" textAnchor="middle" className={`${textColor} text-lg font-medium`} dominantBaseline="middle">{subLabel}</text>
-          <text x="50%" y="56%" textAnchor="middle" className={`${textColor} text-5xl font-bold`} dominantBaseline="middle">{timeLabel}</text>
-        </g>
+        <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" dy="-1.6em" className={`${textColor} text-lg font-medium`}>{subLabel}</text>
+        <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" dy="0.2em" className={`${textColor} text-5xl font-bold`}>{timeLabel}</text>
       </svg>
     );
   }
