@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import './App.css'
+import startSound from './assets/start.mp3';
+import endSound from './assets/end.mp3';
 
 // 기록 타입
 interface WorkoutRecord {
@@ -62,6 +64,10 @@ function App() {
   const timerStartRef = useRef<number | null>(null);
   const timerEndRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
+
+  // 오디오 객체
+  const startAudioRef = useRef<HTMLAudioElement | null>(null);
+  const endAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // 타이머 틱 (1초마다 seconds만 줄임)
   const tick = () => {
@@ -151,7 +157,7 @@ function App() {
   const pauseTimer = () => setIsRunning(false);
 
   // 세팅 화면에서 타이머 시작
-  const handleStart = () => {
+  const handleStart = async () => {
     setWorkDuration(workInput);
     setRestDuration(restInput);
     setTotalSets(setsInput);
@@ -160,6 +166,11 @@ function App() {
     setSetCount(1);
     setScreen('timer');
     setIsRunning(true);
+    if (soundEnabled && startAudioRef.current) {
+      startAudioRef.current.currentTime = 0;
+      startAudioRef.current.volume = 1;
+      try { await startAudioRef.current.play(); } catch (e) {}
+    }
   };
 
   // 세팅 카드 클릭 시 바로 타이머 시작
@@ -179,15 +190,15 @@ function App() {
   const renderRecords = () => {
     const visibleRecords = showAllRecords ? records : records.slice(0, 8);
     return (
-      <div className="w-full max-w-md bg-surface rounded-3xl shadow-lg p-4 mt-6 border border-outline/30 mx-auto">
-        <div className="font-bold text-primary mb-2 tracking-wide text-base">운동 기록</div>
+      <div className="w-full max-w-md bg-gray-800 rounded-3xl shadow-lg p-4 mt-6 border border-gray-700 mx-auto">
+        <div className="font-bold text-gray-50 mb-2 tracking-wide text-base">운동 기록</div>
         {records.length === 0 ? (
-          <div className="text-onSurfaceVariant text-sm">아직 기록이 없습니다.</div>
+          <div className="text-gray-500 text-sm">아직 기록이 없습니다.</div>
         ) : (
           <>
             <ul className={`space-y-2 ${showAllRecords ? 'max-h-96 overflow-y-auto' : ''}`}>
               {visibleRecords.map((r, i) => (
-                <li key={i} className="flex justify-between text-sm text-onSurfaceVariant border-b last:border-b-0 border-outline/20 pb-1">
+                <li key={i} className="flex justify-between text-sm text-gray-500 border-b last:border-b-0 border-gray-700 pb-1">
                   <span>{r.date}</span>
                   <span className="font-medium">{r.sets}세트/{r.work}s/{r.rest}s</span>
                 </li>
@@ -195,7 +206,7 @@ function App() {
             </ul>
             {records.length > 8 && (
               <button
-                className="mt-3 text-primary font-semibold hover:underline text-sm"
+                className="mt-3 w-fit mx-auto py-2 px-4 rounded-xl border border-gray-600 bg-transparent text-gray-200 font-semibold text-sm hover:bg-gray-700 transition-all"
                 onClick={() => setShowAllRecords(v => !v)}
               >
                 {showAllRecords ? '접기' : '더 보기'}
@@ -212,7 +223,7 @@ function App() {
     <div className="w-full max-w-md mt-2 mb-4 overflow-x-auto mx-auto">
       <div className="flex gap-2 w-max px-1">
         {settings.length === 0 ? (
-          <div className="flex flex-col items-center justify-center min-w-[90px] px-3 py-2 rounded-2xl bg-surfaceVariant border border-outline/30 shadow text-onSurfaceVariant font-semibold text-xs opacity-60 select-none">
+          <div className="flex flex-col items-center justify-center min-w-[90px] px-3 py-2 rounded-2xl bg-gray-700 border border-gray-700 shadow text-gray-50 font-semibold text-xs opacity-60 select-none">
             최근 사용한 세팅 없음
           </div>
         ) : (
@@ -220,12 +231,12 @@ function App() {
             <button
               key={i}
               onClick={() => handleSettingQuickStart(s)}
-              className="flex flex-col items-center justify-center min-w-[90px] px-3 py-2 rounded-2xl bg-primaryLight hover:bg-primaryDark border border-outline/30 shadow text-onPrimary font-semibold text-sm transition"
+              className="flex flex-col items-center justify-center min-w-[90px] px-3 py-2 rounded-2xl bg-gray-700 hover:bg-gray-600 border border-gray-700 shadow text-gray-200 font-semibold text-sm transition"
               style={{letterSpacing: '0.01em'}}
             >
-              <span className="text-onPrimary font-bold text-base">{s.sets}세트</span>
-              <span className="text-onPrimary/80 text-xs">{s.work}s 운동</span>
-              <span className="text-onPrimary/80 text-xs">{s.rest}s 휴식</span>
+              <span className="text-gray-200 font-bold text-base">{s.sets}세트</span>
+              <span className="text-gray-400 text-xs">{s.work}s 운동</span>
+              <span className="text-gray-400 text-xs">{s.rest}s 휴식</span>
             </button>
           ))
         )}
@@ -247,7 +258,7 @@ function App() {
     // 색상 분기 (휴식: gray scale)
     const progressColor = isRest ? '#A3A3A3' : '#9B8AFB'; // gray-400 or purple
     const bgColor = isRest ? '#E5E7EB' : '#E3D8FF'; // gray-200 or purple-100
-    const textColor = isRest ? 'fill-gray-700' : 'fill-onPrimary';
+    const textColor = isRest ? 'fill-gray-700' : 'fill-gray-50';
     return (
       <svg width={size} height={size} className="block mx-auto w-full max-w-[320px] h-auto" style={{ transform: 'rotate(-90deg)' }}>
         <circle
@@ -278,107 +289,145 @@ function App() {
     );
   }
 
+  const [soundEnabled, setSoundEnabled] = useState(false);
+
+  useEffect(() => {
+    if (!soundEnabled) return;
+    if (phase === 'work' && isRunning) {
+      startAudioRef.current?.play();
+    }
+    if (phase === 'rest' && setCount === totalSets && !isRunning) {
+      endAudioRef.current?.play();
+    }
+  }, [phase, isRunning, setCount, totalSets, soundEnabled]);
+
+  // 사운드 토글 ON 시 미리듣기
+  const handleSoundToggle = async () => {
+    setSoundEnabled(v => {
+      const next = !v;
+      if (!v && startAudioRef.current) {
+        startAudioRef.current.currentTime = 0;
+        startAudioRef.current.volume = 1;
+        startAudioRef.current.play().catch(() => {});
+      }
+      return next;
+    });
+  };
+
   return (
-    <div className={`fixed inset-0 w-screen min-h-screen font-sans z-0 ${screen === 'timer' && phase === 'rest' ? 'bg-gradient-to-b from-gray-100 to-gray-300' : 'bg-gradient-to-b from-primary/10 to-surfaceVariant'}`}>
+    <div className={`fixed inset-0 w-screen min-h-screen font-sans z-0 bg-gray-900`}>
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen w-screen">
-        <div className="w-full max-w-md px-4 mx-auto flex flex-col items-center justify-center min-h-screen">
-          {screen === 'home' && (
-            <>
-              <button
-                onClick={() => setScreen('setup')}
-                className="w-full py-4 rounded-2xl text-xl font-bold text-white bg-primary shadow-md hover:bg-primary/90 transition mb-2"
-                style={{letterSpacing: '0.03em'}}>
-                시작하기
-              </button>
-              {renderSettings()}
-              {renderRecords()}
-            </>
-          )}
-          {screen === 'setup' && (
-            <>
-              <button
-                onClick={handleSetupBack}
-                className="fixed left-4 top-4 text-primary font-bold text-lg px-3 py-1 rounded-xl hover:bg-primary/10 transition z-20"
-                style={{letterSpacing: '0.02em'}}>
-                ← Back
-              </button>
-              <div className="min-h-screen w-full flex flex-col items-center justify-center">
-                <div className="w-full max-w-md flex flex-col items-center">
-                  <div className="text-2xl font-bold mb-6 text-onPrimary tracking-wide">인터벌 타이머 세팅</div>
-                  <div className="flex flex-col gap-4 w-full">
-                    <label className="flex flex-col text-left text-sm font-bold text-onPrimary gap-1">
-                      운동 시간(초)
-                      <input
-                        type="number"
-                        min={1}
-                        value={workInput}
-                        onChange={e => setWorkInput(Number(e.target.value))}
-                        className="mt-1 px-3 py-2 border-2 border-outline/30 rounded-xl text-lg bg-surfaceVariant focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition text-onPrimary font-semibold"
-                      />
-                    </label>
-                    <label className="flex flex-col text-left text-sm font-bold text-onPrimary gap-1">
-                      휴식 시간(초)
-                      <input
-                        type="number"
-                        min={1}
-                        value={restInput}
-                        onChange={e => setRestInput(Number(e.target.value))}
-                        className="mt-1 px-3 py-2 border-2 border-outline/30 rounded-xl text-lg bg-surfaceVariant focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition text-onPrimary font-semibold"
-                      />
-                    </label>
-                    <label className="flex flex-col text-left text-sm font-bold text-onPrimary gap-1">
-                      세트 수
-                      <input
-                        type="number"
-                        min={1}
-                        value={setsInput}
-                        onChange={e => setSetsInput(Number(e.target.value))}
-                        className="mt-1 px-3 py-2 border-2 border-outline/30 rounded-xl text-lg bg-surfaceVariant focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition text-onPrimary font-semibold"
-                      />
-                    </label>
-                  </div>
-                  <button
-                    onClick={handleStart}
-                    className="w-full py-3 rounded-2xl text-lg font-bold text-white bg-primary shadow-md hover:bg-primary/90 transition min-w-[88px] tracking-widest mt-8"
-                    style={{letterSpacing: '0.03em'}}>
-                    타이머 시작
-                  </button>
+        {screen === 'home' && (
+          <div className="w-full max-w-md px-4 mx-auto flex flex-col items-center justify-center min-h-screen">
+            <button
+              onClick={() => setScreen('setup')}
+              className="w-full rounded-full bg-blue-500 text-white font-semibold h-12 px-8 shadow-md hover:bg-blue-600 transition-all duration-200 mb-4 text-xl"
+              style={{letterSpacing: '0.03em'}}>
+              시작하기
+            </button>
+            {renderSettings()}
+            {renderRecords()}
+          </div>
+        )}
+        {screen === 'setup' && (
+          <>
+            <button
+              onClick={handleSetupBack}
+              className="fixed left-4 top-4 text-blue-300 font-semibold px-4 py-2 hover:text-blue-400 transition-all duration-200 z-20"
+              style={{letterSpacing: '0.02em', background: 'none', boxShadow: 'none', border: 'none'}}>
+              ← Back
+            </button>
+            <div className="min-h-screen w-full flex flex-col items-center justify-center">
+              <div className="w-full max-w-md px-4 py-12 flex flex-col items-center">
+                <div className="text-2xl font-bold mb-6 text-gray-50 tracking-wide">인터벌 타이머 세팅</div>
+                <div className="flex flex-col gap-4 w-full">
+                  <label className="flex flex-col text-left text-base font-semibold text-gray-200 mb-1 gap-1">
+                    운동 시간(초)
+                    <input
+                      type="number"
+                      min={1}
+                      value={workInput}
+                      onChange={e => setWorkInput(Number(e.target.value))}
+                      className="mt-1 px-4 py-3 border border-gray-700 rounded-xl text-lg bg-gray-800 text-gray-100 focus:ring-2 focus:ring-blue-400 outline-none transition"
+                    />
+                  </label>
+                  <label className="flex flex-col text-left text-base font-semibold text-gray-200 mb-1 gap-1">
+                    휴식 시간(초)
+                    <input
+                      type="number"
+                      min={1}
+                      value={restInput}
+                      onChange={e => setRestInput(Number(e.target.value))}
+                      className="mt-1 px-4 py-3 border border-gray-700 rounded-xl text-lg bg-gray-800 text-gray-100 focus:ring-2 focus:ring-blue-400 outline-none transition"
+                    />
+                  </label>
+                  <label className="flex flex-col text-left text-base font-semibold text-gray-200 mb-1 gap-1">
+                    세트 수
+                    <input
+                      type="number"
+                      min={1}
+                      value={setsInput}
+                      onChange={e => setSetsInput(Number(e.target.value))}
+                      className="mt-1 px-4 py-3 border border-gray-700 rounded-xl text-lg bg-gray-800 text-gray-100 focus:ring-2 focus:ring-blue-400 outline-none transition"
+                    />
+                  </label>
+                </div>
+                <button
+                  onClick={handleStart}
+                  className="w-full rounded-full bg-blue-500 text-white font-semibold h-12 px-8 shadow-md hover:bg-blue-600 transition-all duration-200 mt-8 text-lg"
+                  style={{letterSpacing: '0.03em'}}>
+                  타이머 시작
+                </button>
+                <div className="mt-6 flex items-center gap-3">
+                  <span className="text-base font-semibold text-gray-200">사운드</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={soundEnabled}
+                      onChange={handleSoundToggle}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-400 rounded-full peer peer-checked:bg-blue-500 transition-all duration-200"></div>
+                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow transform transition-all duration-200 peer-checked:translate-x-5"></div>
+                  </label>
+                  <span className={`ml-2 text-xs font-bold align-middle`} style={{minWidth: 28, display: 'inline-block', textAlign: 'center', color: soundEnabled ? '#60A5FA' : '#A3A3A3'}}>{soundEnabled ? 'ON' : 'OFF'}</span>
                 </div>
               </div>
-            </>
-          )}
-          {screen === 'timer' && (
-            <>
-              <button
-                onClick={handleSetupBack}
-                className={`absolute left-0 top-0 font-bold text-lg px-3 py-1 rounded-xl transition z-10 ${phase === 'rest' ? 'text-gray-700 hover:bg-gray-200' : 'text-primary hover:bg-primary/10'}`}
-                style={{letterSpacing: '0.02em', marginTop: '12px', marginLeft: '4px'}}>
-                ← Back
-              </button>
-              <div className="w-full flex flex-col items-center pt-8 pb-8">
-                <CircularTimer
-                  percent={progressPercent}
-                  timeLabel={formatTime(seconds)}
-                  subLabel={phase === 'work' ? `${workDuration}초` : `${restDuration}초`}
-                  isRest={phase === 'rest'}
-                />
-                <div className="flex flex-col items-center mt-4">
-                  <div className={`text-sm mb-1 ${phase === 'rest' ? 'text-gray-700' : 'text-onSurfaceVariant'}`}>Set {setCount} / {totalSets}</div>
-                  <div className={`text-lg font-semibold mb-1 ${phase === 'rest' ? 'text-gray-700' : (phase === 'work' ? 'text-tertiary' : 'text-primary')}`}>{phase === 'work' ? '운동' : '휴식'}</div>
-                </div>
-                <div className="flex gap-2 w-full mt-8">
-                  <button
-                    onClick={isRunning ? pauseTimer : startTimer}
-                    className={`flex-1 py-3 rounded-2xl text-lg font-bold shadow-md transition min-w-[88px] tracking-widest
-                      ${phase === 'rest' ? 'text-gray-900 bg-gray-200 hover:bg-gray-300' : 'text-white bg-primary hover:bg-primary/90'}`}
-                    style={{letterSpacing: '0.03em'}}>
-                    {isRunning ? '일시정지' : '시작하기'}
-                  </button>
-                </div>
+            </div>
+          </>
+        )}
+        {screen === 'timer' && (
+          <div className="w-full max-w-md px-4 mx-auto flex flex-col items-center justify-center min-h-screen">
+            <button
+              onClick={handleSetupBack}
+              className={`absolute left-4 top-4 text-blue-300 font-semibold px-4 py-2 underline hover:text-blue-400 transition-all duration-200 z-20`}
+              style={{letterSpacing: '0.02em', background: 'none', boxShadow: 'none', border: 'none'}}>
+              ← Back
+            </button>
+            <div className="w-full flex flex-col items-center pt-8 pb-8">
+              <CircularTimer
+                percent={progressPercent}
+                timeLabel={formatTime(seconds)}
+                subLabel={phase === 'work' ? `${workDuration}초` : `${restDuration}초`}
+                isRest={phase === 'rest'}
+              />
+              <div className="flex flex-col items-center mt-4">
+                <div className={`text-sm mb-1 text-gray-300`}>Set {setCount} / {totalSets}</div>
+                <div className={`text-lg font-semibold mb-1 text-gray-50`}>{phase === 'work' ? '운동' : '휴식'}</div>
               </div>
-            </>
-          )}
-        </div>
+              <div className="flex gap-2 w-full mt-8">
+                <button
+                  onClick={isRunning ? pauseTimer : startTimer}
+                  className={`flex-1 rounded-full ${phase === 'rest' ? 'bg-gray-600' : 'bg-blue-500'} text-white font-semibold h-12 px-8 shadow-md hover:bg-blue-600 transition-all duration-200 text-lg`}
+                  style={{letterSpacing: '0.03em'}}>
+                  {isRunning ? '일시정지' : '시작하기'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        <audio ref={startAudioRef} src={startSound} preload="auto" muted={false} />
+        <audio ref={endAudioRef} src={endSound} preload="auto" muted={false} />
       </div>
     </div>
   )
